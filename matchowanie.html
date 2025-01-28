@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Odczyt danych z obrazu - OCR.space</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
+        table { width: 80%; margin: 20px auto; border-collapse: collapse; }
+        th, td { border: 1px solid black; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .table-container { position: relative; width: 80%; margin: 20px auto; padding: 10px; border: 1px solid black; }
+        .close-btn { position: absolute; top: -10px; right: -10px; background: red; color: white; border: none; padding: 5px; cursor: pointer; }
+        #output { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Odczyt danych z obrazu</h1>
+    <input type="file" id="imageInput" accept="image/*">
+    <div id="output"></div>
+
+    <script>
+        const apiKey = "K82711334988957"; // Tutaj wstaw nowy klucz API z OCR.space
+
+        document.getElementById('imageInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                uploadImage(file);
+            }
+        });
+
+        function uploadImage(file) {
+            let formData = new FormData();
+            formData.append("apikey", apiKey);
+            formData.append("file", file);
+            formData.append("language", "pol"); // Ustawienie języka OCR na polski
+            formData.append("isOverlayRequired", false);
+            formData.append("OCREngine", 2); // Lepszy silnik OCR
+
+            fetch("https://api.ocr.space/parse/image", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.ParsedResults) {
+                    const text = data.ParsedResults[0].ParsedText;
+                    parseData(text);
+                } else {
+                    console.error("Błąd OCR:", data);
+                }
+            })
+            .catch(error => console.error("Błąd:", error));
+        }
+
+        function parseData(text) {
+            const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+            console.log("Rozpoznany tekst:", lines);
+
+            let indices = [];
+            let prices = [];
+
+            for (let i = 0; i < lines.length; i++) {
+                if (/^\d{5}$/.test(lines[i])) {
+                    indices.push(lines[i]);
+                }
+                if (/^\d{1,4}[.,]\d{2}$/.test(lines[i])) {
+                    prices.push(lines[i]);
+                }
+            }
+
+            let tableContainer = document.createElement('div');
+            tableContainer.classList.add('table-container');
+
+            let closeButton = document.createElement('button');
+            closeButton.classList.add('close-btn');
+            closeButton.textContent = 'X';
+            closeButton.onclick = function() { tableContainer.remove(); };
+            
+            let tableHTML = `<table>
+                <tr>
+                    <th>Indeks</th>
+                    <th>Cena netto po rabacie</th>
+                </tr>`;
+
+            for (let i = 0; i < Math.min(indices.length, prices.length); i++) {
+                tableHTML += `<tr>
+                    <td>${indices[i]}</td>
+                    <td>${prices[i]}</td>
+                </tr>`;
+            }
+
+            tableHTML += `</table>`;
+
+            // Poprawne dodanie elementów do kontenera, zamiast nadpisywania go
+            tableContainer.appendChild(closeButton);
+            let tableElement = document.createElement('div');
+            tableElement.innerHTML = tableHTML;
+            tableContainer.appendChild(tableElement);
+
+            document.getElementById('output').appendChild(tableContainer);
+        }
+    </script>
+</body>
+</html>
