@@ -77,20 +77,20 @@
             closeButton.textContent = 'X';
             closeButton.onclick = function() { tableContainer.remove(); };
             
-            let tableHTML = `<table>
+            let tableHTML = <table>
                 <tr>
                     <th>Indeks</th>
                     <th>Cena netto po rabacie</th>
-                </tr>`;
+                </tr>;
 
             for (let i = 0; i < Math.min(indices.length, prices.length); i++) {
-                tableHTML += `<tr>
+                tableHTML += <tr>
                     <td>${indices[i]}</td>
                     <td>${prices[i]}</td>
-                </tr>`;
+                </tr>;
             }
 
-            tableHTML += `</table>`;
+            tableHTML += </table>;
 
             // Poprawne dodanie elementów do kontenera, zamiast nadpisywania go
             tableContainer.appendChild(closeButton);
