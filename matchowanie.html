@@ -17,6 +17,7 @@
 <body>
     <h1>Odczyt danych z obrazu</h1>
     <input type="file" id="imageInput" accept="image/*">
+    <button id="matchButton">MATCH</button>
     <div id="output"></div>
 
     <script>
@@ -28,6 +29,15 @@
             if (file) {
                 uploadImage(file);
             }
+        });
+
+        document.getElementById('matchButton').addEventListener('click', function() {
+            fetch(jsonUrl)
+                .then(response => response.json())
+                .then(database => {
+                    parseData(database);
+                })
+                .catch(error => console.error("Błąd pobierania JSON:", error));
         });
 
         function uploadImage(file) {
@@ -54,75 +64,70 @@
             .catch(error => console.error("Błąd:", error));
         }
 
-        function parseData(text) {
-            fetch(jsonUrl)
-                .then(response => response.json())
-                .then(database => {
-                    const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-                    console.log("Rozpoznany tekst:", lines);
+        function parseData(database) {
+            const lines = document.getElementById("output").textContent.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+            console.log("Rozpoznany tekst:", lines);
 
-                    let indices = [];
-                    let prices = [];
-                    let matchedData = [];
+            let indices = [];
+            let prices = [];
+            let matchedData = [];
 
-                    for (let i = 0; i < lines.length; i++) {
-                        if (/^\d{4,5}$/.test(lines[i])) {
-                            indices.push(lines[i]);
-                        }
-                        if (/^\d{1,4}[.,]\d{2}$/.test(lines[i])) {
-                            prices.push(lines[i]);
-                        }
-                    }
+            for (let i = 0; i < lines.length; i++) {
+                if (/^\d{4,5}$/.test(lines[i])) {
+                    indices.push(lines[i]);
+                }
+                if (/^\d{1,4}[.,]\d{2}$/.test(lines[i])) {
+                    prices.push(lines[i]);
+                }
+            }
 
-                    indices.forEach(index => {
-                        let match = database.find(item => item.MM == index);
-                        if (match) {
-                            matchedData.push({
-                                originalIndex: index,
-                                matchedIndex: match.MM,
-                                name: match.NAZWA,
-                                price: match["CENA 100 MM"],
-                                discount: ((1 - parseFloat(prices[indices.indexOf(index)]) / parseFloat(match["CENA 100 MM"])) * 100).toFixed(2) + "%"
-                            });
-                        }
+            indices.forEach(index => {
+                let match = database.find(item => item.MM == index);
+                if (match) {
+                    matchedData.push({
+                        originalIndex: index,
+                        matchedIndex: match.MM,
+                        name: match.NAZWA,
+                        price: match["CENA 100 MM"],
+                        discount: ((1 - parseFloat(prices[indices.indexOf(index)]) / parseFloat(match["CENA 100 MM"])) * 100).toFixed(2) + "%"
                     });
+                }
+            });
 
-                    let tableContainer = document.createElement('div');
-                    tableContainer.classList.add('table-container');
+            let tableContainer = document.createElement('div');
+            tableContainer.classList.add('table-container');
 
-                    let closeButton = document.createElement('button');
-                    closeButton.classList.add('close-btn');
-                    closeButton.textContent = 'X';
-                    closeButton.onclick = function() { tableContainer.remove(); };
+            let closeButton = document.createElement('button');
+            closeButton.classList.add('close-btn');
+            closeButton.textContent = 'X';
+            closeButton.onclick = function() { tableContainer.remove(); };
 
-                    let tableHTML = `<table>
-                        <tr>
-                            <th>Indeks</th>
-                            <th>Nazwa</th>
-                            <th>Indeks z bazy</th>
-                            <th>Cena netto po rabacie</th>
-                            <th>Cena 100 MM</th>
-                            <th>Rabat</th>
-                        </tr>`;
+            let tableHTML = `<table>
+                <tr>
+                    <th>Indeks</th>
+                    <th>Nazwa</th>
+                    <th>Indeks z bazy</th>
+                    <th>Cena netto po rabacie</th>
+                    <th>Cena 100 MM</th>
+                    <th>Rabat</th>
+                </tr>`;
 
-                    matchedData.forEach(item => {
-                        tableHTML += `<tr>
-                            <td>${item.originalIndex}</td>
-                            <td>${item.name}</td>
-                            <td>${item.matchedIndex}</td>
-                            <td>${prices[indices.indexOf(item.originalIndex)]}</td>
-                            <td>${item.price}</td>
-                            <td>${item.discount}</td>
-                        </tr>`;
-                    });
+            matchedData.forEach(item => {
+                tableHTML += `<tr>
+                    <td>${item.originalIndex}</td>
+                    <td>${item.name}</td>
+                    <td>${item.matchedIndex}</td>
+                    <td>${prices[indices.indexOf(item.originalIndex)]}</td>
+                    <td>${item.price}</td>
+                    <td>${item.discount}</td>
+                </tr>`;
+            });
 
-                    tableHTML += `</table>`;
+            tableHTML += `</table>`;
 
-                    tableContainer.appendChild(closeButton);
-                    tableContainer.innerHTML += tableHTML;
-                    document.getElementById('output').appendChild(tableContainer);
-                })
-                .catch(error => console.error("Błąd pobierania JSON:", error));
+            tableContainer.appendChild(closeButton);
+            tableContainer.innerHTML += tableHTML;
+            document.getElementById('output').appendChild(tableContainer);
         }
     </script>
 </body>
