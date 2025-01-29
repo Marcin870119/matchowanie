@@ -9,40 +9,29 @@
         table { width: 80%; margin: 20px auto; border-collapse: collapse; }
         th, td { border: 1px solid black; padding: 8px; text-align: left; }
         th { background-color: #f2f2f2; }
-        .table-container { position: relative; width: 80%; margin: 20px auto; border: 1px solid black; padding: 10px; }
+        .table-container { position: relative; width: 80%; margin: 20px auto; }
         .close-btn { position: absolute; top: -10px; right: -10px; background: red; color: white; border: none; padding: 5px; cursor: pointer; }
         #output { margin-top: 20px; }
-        #matchButton { 
-            margin-top: 10px; 
-            padding: 10px 20px; 
-            font-size: 16px; 
-            cursor: pointer; 
-            background-color: blue; 
-            color: white; 
-            border: none; 
-            border-radius: 5px; 
-            display: block;
-            margin: 20px auto;
-        }
+        #matchButton { display: block; margin: 20px auto; padding: 10px; font-size: 16px; background-color: #007BFF; color: white; border: none; cursor: pointer; }
+        #matchButton:hover { background-color: #0056b3; }
     </style>
 </head>
 <body>
     <h1>Odczyt danych z obrazu</h1>
     <input type="file" id="imageInput" accept="image/*">
-    <button id="matchButton">MATCH</button>
+    <button id="matchButton">MATCH</button> <!-- Przyciski MUSI być tutaj -->
     <div id="output"></div>
 
     <script>
         const apiKey = "K82711334988957";
         const jsonUrl = "https://marcin870119.github.io/matchowanie/data.json";
 
-        // Sprawdzenie czy przycisk jest na stronie
-        document.addEventListener("DOMContentLoaded", () => {
+        document.addEventListener("DOMContentLoaded", function () {
             const matchButton = document.getElementById("matchButton");
-            if (matchButton) {
-                console.log("Przycisk MATCH jest na stronie.");
+            if (!matchButton) {
+                console.error("❌ BŁĄD: Przycisk MATCH nie został załadowany do DOM!");
             } else {
-                console.error("Przycisk MATCH się nie wyświetla.");
+                console.log("✅ Przycisk MATCH został załadowany.");
             }
         });
 
@@ -54,11 +43,10 @@
         });
 
         document.getElementById('matchButton').addEventListener('click', function() {
-            console.log("Przycisk MATCH kliknięty");
             fetch(jsonUrl)
                 .then(response => response.json())
                 .then(data => {
-                    console.log("Dane z JSON:", data);
+                    console.log("📌 Dane z JSON:", data);
                 })
                 .catch(error => console.error("Błąd pobierania JSON:", error));
         });
@@ -92,7 +80,7 @@
                 .then(response => response.json())
                 .then(database => {
                     const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-                    console.log("Rozpoznany tekst:", lines);
+                    console.log("📌 Rozpoznany tekst:", lines);
 
                     let indices = [];
                     let prices = [];
@@ -152,9 +140,7 @@
                     tableHTML += `</table>`;
 
                     tableContainer.appendChild(closeButton);
-                    let tableElement = document.createElement('div');
-                    tableElement.innerHTML = tableHTML;
-                    tableContainer.appendChild(tableElement);
+                    tableContainer.innerHTML += tableHTML;
                     document.getElementById('output').appendChild(tableContainer);
                 })
                 .catch(error => console.error("Błąd pobierania JSON:", error));
