@@ -19,12 +19,12 @@
 <body>
     <h1>Odczyt danych z obrazu</h1>
     <input type="file" id="imageInput" accept="image/*">
-    <button id="matchButton">MATCH</button> <!-- Przyciski MUSI być tutaj -->
+    <button id="matchButton">MATCH</button>
     <div id="output"></div>
 
     <script>
         const apiKey = "K82711334988957";
-        const jsonUrl = "https://marcin870119.github.io/matchowanie/data.json";
+        const jsonUrl = "https://marcin870119.github.io/matchowanie/data.json?nocache=" + new Date().getTime();
 
         document.addEventListener("DOMContentLoaded", function () {
             const matchButton = document.getElementById("matchButton");
@@ -48,7 +48,7 @@
                 .then(data => {
                     console.log("📌 Dane z JSON:", data);
                 })
-                .catch(error => console.error("Błąd pobierania JSON:", error));
+                .catch(error => console.error("❌ Błąd pobierania JSON:", error));
         });
 
         function uploadImage(file) {
@@ -69,10 +69,10 @@
                     const text = data.ParsedResults[0].ParsedText;
                     parseData(text);
                 } else {
-                    console.error("Błąd OCR:", data);
+                    console.error("❌ Błąd OCR:", data);
                 }
             })
-            .catch(error => console.error("Błąd:", error));
+            .catch(error => console.error("❌ Błąd:", error));
         }
 
         function parseData(text) {
@@ -95,18 +95,27 @@
                         }
                     }
 
+                    console.log("📌 Odczytane indeksy:", indices);
+                    console.log("📌 Odczytane ceny:", prices);
+
                     indices.forEach(index => {
-                        let match = database.find(item => item.MM == index);
+                        let match = database.find(item => String(item.MM) === String(index));
                         if (match) {
                             matchedData.push({
                                 originalIndex: index,
                                 matchedIndex: match.MM,
                                 name: match.NAZWA,
                                 price: match["CENA 100 MM"],
-                                discount: ((1 - parseFloat(prices[indices.indexOf(index)]) / parseFloat(match["CENA 100 MM"])) * 100).toFixed(2) + "%"
+                                discount: ((1 - parseFloat(prices[indices.indexOf(index)].replace(",", ".")) / parseFloat(match["CENA 100 MM"])) * 100).toFixed(2) + "%"
                             });
                         }
                     });
+
+                    if (matchedData.length === 0) {
+                        console.warn("⚠️ Brak dopasowanych danych!");
+                    } else {
+                        console.log("✅ Dopasowane dane:", matchedData);
+                    }
 
                     let tableContainer = document.createElement('div');
                     tableContainer.classList.add('table-container');
@@ -143,7 +152,7 @@
                     tableContainer.innerHTML += tableHTML;
                     document.getElementById('output').appendChild(tableContainer);
                 })
-                .catch(error => console.error("Błąd pobierania JSON:", error));
+                .catch(error => console.error("❌ Błąd pobierania JSON:", error));
         }
     </script>
 </body>
