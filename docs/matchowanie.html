@@ -20,16 +20,8 @@
     <div id="output"></div>
 
     <script>
-        const apiKey = "K82711334988957"; // Wstaw swój klucz API OCR.space
-        const databaseURL = "https://marcin870119.github.io/matchowanie/docs/data.json"; // Wstaw URL do pliku JSON na GitHubie
-
-        let database = {};
-
-        // Pobranie bazy danych z GitHuba
-        fetch(databaseURL)
-            .then(response => response.json())
-            .then(data => { database = data; })
-            .catch(error => console.error("Błąd pobierania bazy danych:", error));
+        const apiKey = "K82711334988957";
+        const jsonUrl = "https://marcin870119.github.io/matchowanie/data.json";
 
         document.getElementById('imageInput').addEventListener('change', function(event) {
             const file = event.target.files[0];
@@ -42,7 +34,7 @@
             let formData = new FormData();
             formData.append("apikey", apiKey);
             formData.append("file", file);
-            formData.append("language", "pol"); 
+            formData.append("language", "pol");
             formData.append("isOverlayRequired", false);
             formData.append("OCREngine", 2);
 
@@ -63,70 +55,78 @@
         }
 
         function parseData(text) {
-            const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-            console.log("Rozpoznany tekst:", lines);
+            fetch(jsonUrl)
+                .then(response => response.json())
+                .then(database => {
+                    const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+                    console.log("Rozpoznany tekst:", lines);
 
-            let indices = [];
-            let prices = [];
+                    let indices = [];
+                    let prices = [];
+                    let matchedData = [];
 
-            for (let i = 0; i < lines.length; i++) {
-                if (/^\d{5}$/.test(lines[i])) {
-                    indices.push(lines[i]);
-                }
-                if (/^\d{1,4}[.,]\d{2}$/.test(lines[i])) {
-                    prices.push(parseFloat(lines[i].replace(",", "."))); 
-                }
-            }
-
-            let tableContainer = document.createElement('div');
-            tableContainer.classList.add('table-container');
-
-            let closeButton = document.createElement('button');
-            closeButton.classList.add('close-btn');
-            closeButton.textContent = 'X';
-            closeButton.onclick = function() { tableContainer.remove(); };
-            
-            let tableHTML = `<table>
-                <tr>
-                    <th>Indeks</th>
-                    <th>Kod systemowy</th>
-                    <th>Cena z bazy</th>
-                    <th>Cena netto po rabacie</th>
-                    <th>Rabat %</th>
-                </tr>`;
-
-            for (let i = 0; i < indices.length; i++) {
-                let indeks = indices[i];
-                let cenaNetto = prices[i] || "Brak";
-                let kodSystemowy = "Brak";
-                let cenaZBazy = "Brak";
-                let rabat = "Brak";
-
-                if (database[indeks]) {
-                    kodSystemowy = database[indeks].kod_systemowy;
-                    cenaZBazy = database[indeks].cena.toFixed(2);
-                    if (!isNaN(cenaNetto) && !isNaN(cenaZBazy)) {
-                        rabat = (((cenaZBazy - cenaNetto) / cenaZBazy) * 100).toFixed(2) + "%";
+                    for (let i = 0; i < lines.length; i++) {
+                        if (/^\d{4,5}$/.test(lines[i])) {
+                            indices.push(lines[i]);
+                        }
+                        if (/^\d{1,4}[.,]\d{2}$/.test(lines[i])) {
+                            prices.push(lines[i].replace(',', '.'));
+                        }
                     }
-                }
 
-                tableHTML += `<tr>
-                    <td>${indeks}</td>
-                    <td>${kodSystemowy}</td>
-                    <td>${cenaZBazy}</td>
-                    <td>${cenaNetto}</td>
-                    <td>${rabat}</td>
-                </tr>`;
-            }
+                    indices.forEach(index => {
+                        let match = database.find(item => item.MM == index);
+                        if (match) {
+                            let originalPrice = prices[indices.indexOf(index)] || "Brak";
+                            let basePrice = match["CENA 100 MM"] ? parseFloat(match["CENA 100 MM"]) : "Brak";
+                            let discount = (originalPrice !== "Brak" && basePrice !== "Brak") ?
+                                ((1 - parseFloat(originalPrice) / basePrice) * 100).toFixed(2) + "%" : "Brak";
+                            matchedData.push({
+                                originalIndex: index,
+                                matchedIndex: match.MM,
+                                name: match.NAZWA,
+                                price: basePrice,
+                                discount: discount
+                            });
+                        }
+                    });
 
-            tableHTML += `</table>`;
+                    let tableContainer = document.createElement('div');
+                    tableContainer.classList.add('table-container');
 
-            tableContainer.appendChild(closeButton);
-            let tableElement = document.createElement('div');
-            tableElement.innerHTML = tableHTML;
-            tableContainer.appendChild(tableElement);
+                    let closeButton = document.createElement('button');
+                    closeButton.classList.add('close-btn');
+                    closeButton.textContent = 'X';
+                    closeButton.onclick = function() { tableContainer.remove(); };
 
-            document.getElementById('output').appendChild(tableContainer);
+                    let tableHTML = `<table>
+                        <tr>
+                            <th>Indeks</th>
+                            <th>Nazwa</th>
+                            <th>Indeks z bazy</th>
+                            <th>Cena netto po rabacie</th>
+                            <th>Cena 100 MM</th>
+                            <th>Rabat</th>
+                        </tr>`;
+
+                    matchedData.forEach(item => {
+                        tableHTML += `<tr>
+                            <td>${item.originalIndex}</td>
+                            <td>${item.name}</td>
+                            <td>${item.matchedIndex}</td>
+                            <td>${item.price !== "Brak" ? item.price : "Brak"}</td>
+                            <td>${item.price !== "Brak" ? item.price : "Brak"}</td>
+                            <td>${item.discount}</td>
+                        </tr>`;
+                    });
+
+                    tableHTML += `</table>`;
+
+                    tableContainer.appendChild(closeButton);
+                    tableContainer.innerHTML += tableHTML;
+                    document.getElementById('output').appendChild(tableContainer);
+                })
+                .catch(error => console.error("Błąd pobierania JSON:", error));
         }
     </script>
 </body>
