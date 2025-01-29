@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Odczyt danych z obrazu - OCR.space</title>
+    <title>Test OCR API - Odczyt danych</title>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
         table { width: 80%; margin: 20px auto; border-collapse: collapse; }
@@ -15,13 +15,12 @@
     </style>
 </head>
 <body>
-    <h1>Odczyt danych z obrazu</h1>
+    <h1>Test OCR API - Odczyt danych</h1>
     <input type="file" id="imageInput" accept="image/*">
     <div id="output"></div>
 
     <script>
         const apiKey = "K82711334988957";
-        const jsonUrl = "https://marcin870119.github.io/matchowanie/data.json";
 
         document.getElementById('imageInput').addEventListener('change', function(event) {
             const file = event.target.files[0];
@@ -47,7 +46,7 @@
                 if (data.ParsedResults) {
                     const text = data.ParsedResults[0].ParsedText;
                     console.log("Rozpoznany tekst z OCR:", text);
-                    parseData(text);
+                    displayOCRResults(text);
                 } else {
                     console.error("Błąd OCR:", data);
                 }
@@ -55,55 +54,7 @@
             .catch(error => console.error("Błąd:", error));
         }
 
-        function parseData(text) {
-            fetch(jsonUrl)
-                .then(response => response.json())
-                .then(database => {
-                    const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-                    console.log("Rozpoznany tekst z OCR:", lines);
-
-                    let matchedData = [];
-
-                    for (let i = 0; i < lines.length; i++) {
-                        let indexMatch = lines[i].match(/^\d{4,5}$/);
-                        let priceMatch = lines[i + 1]?.match(/^\d{1,4}[.,]\d{2}$/);
-
-                        if (indexMatch) {
-                            let index = indexMatch[0];
-                            let price = priceMatch ? priceMatch[0].replace(',', '.') : "Brak";
-                            let match = database.find(item => item.MM == index);
-
-                            if (match) {
-                                let basePrice = match["CENA 100 MM"] ? parseFloat(match["CENA 100 MM"]) : "Brak";
-                                let discount = (basePrice !== "Brak" && price !== "Brak") ? ((1 - parseFloat(price) / basePrice) * 100).toFixed(2) + "%" : "Brak";
-                                matchedData.push({
-                                    originalIndex: index,
-                                    matchedIndex: match.MM,
-                                    name: match.NAZWA,
-                                    price: price,
-                                    basePrice: basePrice,
-                                    discount: discount
-                                });
-                            } else {
-                                matchedData.push({
-                                    originalIndex: index,
-                                    matchedIndex: "Brak",
-                                    name: "Nie znaleziono w bazie",
-                                    price: price,
-                                    basePrice: "Brak",
-                                    discount: "Brak"
-                                });
-                            }
-                        }
-                    }
-
-                    console.log("Dopasowane dane:", matchedData);
-                    displayData(matchedData);
-                })
-                .catch(error => console.error("Błąd pobierania JSON:", error));
-        }
-
-        function displayData(data) {
+        function displayOCRResults(text) {
             let tableContainer = document.createElement('div');
             tableContainer.classList.add('table-container');
 
@@ -112,25 +63,16 @@
             closeButton.textContent = 'X';
             closeButton.onclick = function() { tableContainer.remove(); };
 
+            let lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+            console.log("Rozpoznane linie:", lines);
+
             let tableHTML = `<table>
                 <tr>
-                    <th>Indeks</th>
-                    <th>Nazwa</th>
-                    <th>Indeks z bazy</th>
-                    <th>Cena netto po rabacie</th>
-                    <th>Cena 100 MM</th>
-                    <th>Rabat</th>
+                    <th>Rozpoznany tekst</th>
                 </tr>`;
 
-            data.forEach(item => {
-                tableHTML += `<tr>
-                    <td>${item.originalIndex}</td>
-                    <td>${item.name}</td>
-                    <td>${item.matchedIndex}</td>
-                    <td>${item.price !== "Brak" ? item.price : "Brak"}</td>
-                    <td>${item.basePrice !== "Brak" ? item.basePrice : "Brak"}</td>
-                    <td>${item.discount}</td>
-                </tr>`;
+            lines.forEach(line => {
+                tableHTML += `<tr><td>${line}</td></tr>`;
             });
 
             tableHTML += `</table>`;
