@@ -9,7 +9,7 @@
         table { width: 80%; margin: 20px auto; border-collapse: collapse; }
         th, td { border: 1px solid black; padding: 8px; text-align: left; }
         th { background-color: #f2f2f2; }
-        .table-container { position: relative; width: 80%; margin: 20px auto; padding: 10px; border: 1px solid black; }
+        .table-container { position: relative; width: 80%; margin: 20px auto; }
         .close-btn { position: absolute; top: -10px; right: -10px; background: red; color: white; border: none; padding: 5px; cursor: pointer; }
         #output { margin-top: 20px; }
     </style>
@@ -20,7 +20,16 @@
     <div id="output"></div>
 
     <script>
-        const apiKey = "K82711334988957"; // Tutaj wstaw nowy klucz API z OCR.space
+        const apiKey = "K82711334988957"; // Wstaw swój klucz API OCR.space
+        const databaseURL = "URL_DO_JSON_Z_GITHUBA"; // Wstaw URL do pliku JSON na GitHubie
+
+        let database = {};
+
+        // Pobranie bazy danych z GitHuba
+        fetch(databaseURL)
+            .then(response => response.json())
+            .then(data => { database = data; })
+            .catch(error => console.error("Błąd pobierania bazy danych:", error));
 
         document.getElementById('imageInput').addEventListener('change', function(event) {
             const file = event.target.files[0];
@@ -33,9 +42,9 @@
             let formData = new FormData();
             formData.append("apikey", apiKey);
             formData.append("file", file);
-            formData.append("language", "pol"); // Ustawienie języka OCR na polski
+            formData.append("language", "pol"); 
             formData.append("isOverlayRequired", false);
-            formData.append("OCREngine", 2); // Lepszy silnik OCR
+            formData.append("OCREngine", 2);
 
             fetch("https://api.ocr.space/parse/image", {
                 method: "POST",
@@ -65,7 +74,7 @@
                     indices.push(lines[i]);
                 }
                 if (/^\d{1,4}[.,]\d{2}$/.test(lines[i])) {
-                    prices.push(lines[i]);
+                    prices.push(parseFloat(lines[i].replace(",", "."))); 
                 }
             }
 
@@ -77,22 +86,41 @@
             closeButton.textContent = 'X';
             closeButton.onclick = function() { tableContainer.remove(); };
             
-            let tableHTML = <table>
+            let tableHTML = `<table>
                 <tr>
                     <th>Indeks</th>
+                    <th>Kod systemowy</th>
+                    <th>Cena z bazy</th>
                     <th>Cena netto po rabacie</th>
-                </tr>;
+                    <th>Rabat %</th>
+                </tr>`;
 
-            for (let i = 0; i < Math.min(indices.length, prices.length); i++) {
-                tableHTML += <tr>
-                    <td>${indices[i]}</td>
-                    <td>${prices[i]}</td>
-                </tr>;
+            for (let i = 0; i < indices.length; i++) {
+                let indeks = indices[i];
+                let cenaNetto = prices[i] || "Brak";
+                let kodSystemowy = "Brak";
+                let cenaZBazy = "Brak";
+                let rabat = "Brak";
+
+                if (database[indeks]) {
+                    kodSystemowy = database[indeks].kod_systemowy;
+                    cenaZBazy = database[indeks].cena.toFixed(2);
+                    if (!isNaN(cenaNetto) && !isNaN(cenaZBazy)) {
+                        rabat = (((cenaZBazy - cenaNetto) / cenaZBazy) * 100).toFixed(2) + "%";
+                    }
+                }
+
+                tableHTML += `<tr>
+                    <td>${indeks}</td>
+                    <td>${kodSystemowy}</td>
+                    <td>${cenaZBazy}</td>
+                    <td>${cenaNetto}</td>
+                    <td>${rabat}</td>
+                </tr>`;
             }
 
-            tableHTML += </table>;
+            tableHTML += `</table>`;
 
-            // Poprawne dodanie elementów do kontenera, zamiast nadpisywania go
             tableContainer.appendChild(closeButton);
             let tableElement = document.createElement('div');
             tableElement.innerHTML = tableHTML;
