@@ -20,7 +20,7 @@
     <div id="output"></div>
 
     <script>
-        const apiKey = "K82711334988957"; // Tutaj wstaw nowy klucz API z OCR.space
+        const apiKey = "K82711334988957"; // Klucz API OCR.space
 
         document.getElementById('imageInput').addEventListener('change', function(event) {
             const file = event.target.files[0];
@@ -33,9 +33,9 @@
             let formData = new FormData();
             formData.append("apikey", apiKey);
             formData.append("file", file);
-            formData.append("language", "pol"); // Ustawienie języka OCR na polski
+            formData.append("language", "pol"); // Język OCR polski
             formData.append("isOverlayRequired", false);
-            formData.append("OCREngine", 1); // Zmieniono z 2 na 1
+            formData.append("OCREngine", 1); // Engine 1 dla dokładności
 
             fetch("https://api.ocr.space/parse/image", {
                 method: "POST",
@@ -43,6 +43,7 @@
             })
             .then(response => response.json())
             .then(data => {
+                console.log("Dane OCR:", data);
                 if (data.ParsedResults) {
                     const text = data.ParsedResults[0].ParsedText;
                     parseData(text);
@@ -50,7 +51,7 @@
                     console.error("Błąd OCR:", data);
                 }
             })
-            .catch(error => console.error("Błąd:", error));
+            .catch(error => console.error("Błąd API:", error));
         }
 
         function parseData(text) {
@@ -61,13 +62,16 @@
             let prices = [];
 
             for (let i = 0; i < lines.length; i++) {
-                if (/^\d{5}$/.test(lines[i])) {
+                if (/^\d{5}$/.test(lines[i])) { // Indeks (5 cyfr)
                     indices.push(lines[i]);
                 }
-                if (/^\d{1,4}[.,]\d{2}$/.test(lines[i])) {
-                    prices.push(lines[i]);
+                if (/^\d{1,4}[.,]\d{2}$/.test(lines[i])) { // Cena (1-4 cyfry + przecinek/kropka + 2 cyfry)
+                    prices.push(lines[i].replace(',', '.')); // Zamiana przecinka na kropkę
                 }
             }
+
+            console.log("Indeksy:", indices);
+            console.log("Ceny:", prices);
 
             let tableContainer = document.createElement('div');
             tableContainer.classList.add('table-container');
@@ -83,7 +87,8 @@
                     <th>Cena netto po rabacie</th>
                 </tr>`;
 
-            for (let i = 0; i < Math.min(indices.length, prices.length); i++) {
+            let minLength = Math.min(indices.length, prices.length);
+            for (let i = 0; i < minLength; i++) {
                 tableHTML += `<tr>
                     <td>${indices[i]}</td>
                     <td>${prices[i]}</td>
@@ -92,7 +97,6 @@
 
             tableHTML += `</table>`;
 
-            // Poprawne dodanie elementów do kontenera, zamiast nadpisywania go
             tableContainer.appendChild(closeButton);
             let tableElement = document.createElement('div');
             tableElement.innerHTML = tableHTML;
