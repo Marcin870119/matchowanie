@@ -20,11 +20,12 @@
     <div id="output"></div>
 
     <script>
-        const apiKey = "K82711334988957";
+        const apiKey = "K82711334988957"; // Wstaw tutaj swój klucz API OCR.space
 
         document.getElementById('imageInput').addEventListener('change', function(event) {
             const file = event.target.files[0];
             if (file) {
+                console.log("Załadowano plik:", file.name);
                 uploadImage(file);
             }
         });
@@ -37,21 +38,28 @@
             formData.append("isOverlayRequired", false);
             formData.append("OCREngine", 2);
 
+            console.log("Wysłano obraz do OCR API...");
             fetch("https://api.ocr.space/parse/image", {
                 method: "POST",
                 body: formData
             })
             .then(response => response.json())
             .then(data => {
+                console.log("Pełna odpowiedź z OCR API:", data);
+                
                 if (data.ParsedResults) {
                     const text = data.ParsedResults[0].ParsedText;
                     console.log("Rozpoznany tekst z OCR:", text);
                     displayOCRResults(text);
                 } else {
-                    console.error("Błąd OCR:", data);
+                    console.error("Błąd OCR, brak wyników:", data);
+                    document.getElementById('output').innerHTML = "<p style='color: red;'>Błąd OCR: Brak wyników!</p>";
                 }
             })
-            .catch(error => console.error("Błąd:", error));
+            .catch(error => {
+                console.error("Błąd zapytania do API:", error);
+                document.getElementById('output').innerHTML = "<p style='color: red;'>Błąd zapytania do OCR API!</p>";
+            });
         }
 
         function displayOCRResults(text) {
