@@ -3,30 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test OCR API - Odczyt danych</title>
+    <title>Odczyt danych z obrazu - OCR.space</title>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
+        img { max-width: 100%; height: auto; margin-top: 10px; }
         table { width: 80%; margin: 20px auto; border-collapse: collapse; }
         th, td { border: 1px solid black; padding: 8px; text-align: left; }
         th { background-color: #f2f2f2; }
-        .table-container { position: relative; width: 80%; margin: 20px auto; }
-        .close-btn { position: absolute; top: -10px; right: -10px; background: red; color: white; border: none; padding: 5px; cursor: pointer; }
         #output { margin-top: 20px; }
     </style>
 </head>
 <body>
-    <h1>Test OCR API - Odczyt danych</h1>
+    <h1>Odczyt danych z obrazu</h1>
     <input type="file" id="imageInput" accept="image/*">
+    <br>
+    <img id="preview" src="" alt="Podgląd obrazu">
     <div id="output"></div>
 
     <script>
-        const apiKey = "K82711334988957"; // Wstaw tutaj swój klucz API OCR.space
+        const apiKey = "K82711334988957"; // Wstaw tutaj swój klucz API z OCR.space
 
         document.getElementById('imageInput').addEventListener('change', function(event) {
             const file = event.target.files[0];
             if (file) {
-                console.log("Załadowano plik:", file.name);
-                uploadImage(file);
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('preview').src = e.target.result;
+                    uploadImage(file);
+                };
+                reader.readAsDataURL(file);
             }
         });
 
@@ -34,59 +39,65 @@
             let formData = new FormData();
             formData.append("apikey", apiKey);
             formData.append("file", file);
-            formData.append("language", "pol");
+            formData.append("language", "pol"); // Polski język
             formData.append("isOverlayRequired", false);
-            formData.append("OCREngine", 2);
+            formData.append("OCREngine", 2); // Użycie lepszego silnika OCR
 
-            console.log("Wysłano obraz do OCR API...");
             fetch("https://api.ocr.space/parse/image", {
                 method: "POST",
                 body: formData
             })
             .then(response => response.json())
             .then(data => {
-                console.log("Pełna odpowiedź z OCR API:", data);
-                
                 if (data.ParsedResults) {
                     const text = data.ParsedResults[0].ParsedText;
-                    console.log("Rozpoznany tekst z OCR:", text);
-                    displayOCRResults(text);
+                    parseData(text);
                 } else {
-                    console.error("Błąd OCR, brak wyników:", data);
-                    document.getElementById('output').innerHTML = "<p style='color: red;'>Błąd OCR: Brak wyników!</p>";
+                    console.error("Błąd OCR:", data);
                 }
             })
-            .catch(error => {
-                console.error("Błąd zapytania do API:", error);
-                document.getElementById('output').innerHTML = "<p style='color: red;'>Błąd zapytania do OCR API!</p>";
-            });
+            .catch(error => console.error("Błąd:", error));
         }
 
-        function displayOCRResults(text) {
-            let tableContainer = document.createElement('div');
-            tableContainer.classList.add('table-container');
+        function parseData(text) {
+            const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+            console.log("Rozpoznany tekst:", lines);
 
-            let closeButton = document.createElement('button');
-            closeButton.classList.add('close-btn');
-            closeButton.textContent = 'X';
-            closeButton.onclick = function() { tableContainer.remove(); };
+            let products = [];
+            let currentProduct = {};
 
-            let lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-            console.log("Rozpoznane linie:", lines);
-
-            let tableHTML = `<table>
-                <tr>
-                    <th>Rozpoznany tekst</th>
-                </tr>`;
-
-            lines.forEach(line => {
-                tableHTML += `<tr><td>${line}</td></tr>`;
+            lines.forEach((line, i) => {
+                if (/^\d{5}$/.test(line)) { // Indeks produktu (5 cyfr)
+                    if (Object.keys(currentProduct).length > 0) {
+                        products.push(currentProduct);
+                    }
+                    currentProduct = { indeks: line, cena: "" };
+                } else if (/\b\d{1,4}[.,]\d{2}\b/.test(line) && currentProduct.indeks) { // Cena netto po rabacie
+                    currentProduct.cena = line;
+                }
             });
 
-            tableHTML += `</table>`;
-            tableContainer.appendChild(closeButton);
-            tableContainer.innerHTML += tableHTML;
-            document.getElementById('output').appendChild(tableContainer);
+            if (Object.keys(currentProduct).length > 0) {
+                products.push(currentProduct);
+            }
+
+            let outputHTML = `<table>
+                <tr>
+                    <th>Indeks</th>
+                    <th>Cena netto po rabacie</th>
+                </tr>`;
+
+            products.forEach(product => {
+                if (product.indeks && product.cena) {
+                    outputHTML += `<tr>
+                        <td>${product.indeks}</td>
+                        <td>${product.cena}</td>
+                    </tr>`;
+                }
+            });
+
+            outputHTML += `</table>`;
+            document.getElementById('output').innerHTML = outputHTML;
         }
     </script>
 </body>
