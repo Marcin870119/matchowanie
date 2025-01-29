@@ -70,18 +70,12 @@
                             indices.push(lines[i]);
                         }
                         if (/^\d{1,4}[.,]\d{2}$/.test(lines[i])) {
-                            let price = lines[i].replace(',', '.');
-                            if (!prices.includes(price)) {
-                                prices.push(price);
-                            }
+                            prices.push(lines[i].replace(',', '.'));
                         }
                     }
 
-                    console.log("Indeksy:", indices);
-                    console.log("Ceny:", prices);
-
                     indices.forEach(index => {
-                        let match = database.find(item => item.MM == index);
+                        let match = database.find(item => item.MM == String(index));
                         if (match) {
                             let originalPrice = prices[indices.indexOf(index)] || "Brak";
                             let basePrice = match["CENA 100 MM"] ? parseFloat(match["CENA 100 MM"]) : "Brak";
