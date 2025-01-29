@@ -75,7 +75,7 @@
                     }
 
                     indices.forEach(index => {
-                        let match = database.find(item => item.MM == String(index));
+                        let match = database.find(item => item.MM == index);
                         if (match) {
                             let originalPrice = prices[indices.indexOf(index)] || "Brak";
                             let basePrice = match["CENA 100 MM"] ? parseFloat(match["CENA 100 MM"]) : "Brak";
