@@ -61,73 +61,71 @@
                     const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
                     console.log("Rozpoznany tekst:", lines);
 
-                    let indices = [];
-                    let prices = [];
                     let matchedData = [];
 
                     for (let i = 0; i < lines.length; i++) {
-                        if (/^\d{4,5}$/.test(lines[i])) {
-                            indices.push(lines[i]);
-                        }
-                        if (/^\d{1,4}[.,]\d{2}$/.test(lines[i])) {
-                            prices.push(lines[i].replace(',', '.'));
+                        let indexMatch = lines[i].match(/^\d{4,5}$/);
+                        let priceMatch = lines[i + 1]?.match(/^\d{1,4}[.,]\d{2}$/);
+                        
+                        if (indexMatch && priceMatch) {
+                            let index = indexMatch[0];
+                            let price = priceMatch[0].replace(',', '.');
+                            let match = database.find(item => item.MM == index);
+
+                            if (match) {
+                                let basePrice = match["CENA 100 MM"] ? parseFloat(match["CENA 100 MM"]) : "Brak";
+                                let discount = (basePrice !== "Brak") ? ((1 - parseFloat(price) / basePrice) * 100).toFixed(2) + "%" : "Brak";
+                                matchedData.push({
+                                    originalIndex: index,
+                                    matchedIndex: match.MM,
+                                    name: match.NAZWA,
+                                    price: price,
+                                    basePrice: basePrice,
+                                    discount: discount
+                                });
+                            }
                         }
                     }
 
-                    indices.forEach(index => {
-                        let match = database.find(item => item.MM == index);
-                        if (match) {
-                            let originalPrice = prices[indices.indexOf(index)] || "Brak";
-                            let basePrice = match["CENA 100 MM"] ? parseFloat(match["CENA 100 MM"]) : "Brak";
-                            let discount = (originalPrice !== "Brak" && basePrice !== "Brak") ?
-                                ((1 - parseFloat(originalPrice) / basePrice) * 100).toFixed(2) + "%" : "Brak";
-                            matchedData.push({
-                                originalIndex: index,
-                                matchedIndex: match.MM,
-                                name: match.NAZWA,
-                                price: originalPrice,
-                                basePrice: basePrice,
-                                discount: discount
-                            });
-                        }
-                    });
-
-                    let tableContainer = document.createElement('div');
-                    tableContainer.classList.add('table-container');
-
-                    let closeButton = document.createElement('button');
-                    closeButton.classList.add('close-btn');
-                    closeButton.textContent = 'X';
-                    closeButton.onclick = function() { tableContainer.remove(); };
-
-                    let tableHTML = `<table>
-                        <tr>
-                            <th>Indeks</th>
-                            <th>Nazwa</th>
-                            <th>Indeks z bazy</th>
-                            <th>Cena netto po rabacie</th>
-                            <th>Cena 100 MM</th>
-                            <th>Rabat</th>
-                        </tr>`;
-
-                    matchedData.forEach(item => {
-                        tableHTML += `<tr>
-                            <td>${item.originalIndex}</td>
-                            <td>${item.name}</td>
-                            <td>${item.matchedIndex}</td>
-                            <td>${item.price !== "Brak" ? item.price : "Brak"}</td>
-                            <td>${item.basePrice !== "Brak" ? item.basePrice : "Brak"}</td>
-                            <td>${item.discount}</td>
-                        </tr>`;
-                    });
-
-                    tableHTML += `</table>`;
-
-                    tableContainer.appendChild(closeButton);
-                    tableContainer.innerHTML += tableHTML;
-                    document.getElementById('output').appendChild(tableContainer);
+                    displayData(matchedData);
                 })
                 .catch(error => console.error("Błąd pobierania JSON:", error));
+        }
+
+        function displayData(data) {
+            let tableContainer = document.createElement('div');
+            tableContainer.classList.add('table-container');
+
+            let closeButton = document.createElement('button');
+            closeButton.classList.add('close-btn');
+            closeButton.textContent = 'X';
+            closeButton.onclick = function() { tableContainer.remove(); };
+
+            let tableHTML = `<table>
+                <tr>
+                    <th>Indeks</th>
+                    <th>Nazwa</th>
+                    <th>Indeks z bazy</th>
+                    <th>Cena netto po rabacie</th>
+                    <th>Cena 100 MM</th>
+                    <th>Rabat</th>
+                </tr>`;
+
+            data.forEach(item => {
+                tableHTML += `<tr>
+                    <td>${item.originalIndex}</td>
+                    <td>${item.name}</td>
+                    <td>${item.matchedIndex}</td>
+                    <td>${item.price !== "Brak" ? item.price : "Brak"}</td>
+                    <td>${item.basePrice !== "Brak" ? item.basePrice : "Brak"}</td>
+                    <td>${item.discount}</td>
+                </tr>`;
+            });
+
+            tableHTML += `</table>`;
+            tableContainer.appendChild(closeButton);
+            tableContainer.innerHTML += tableHTML;
+            document.getElementById('output').appendChild(tableContainer);
         }
     </script>
 </body>
