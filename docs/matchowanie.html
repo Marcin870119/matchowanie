@@ -60,18 +60,21 @@
 
             let indices = [];
             let prices = [];
+            let errors = [];
 
             for (let i = 0; i < lines.length; i++) {
                 if (/^\d{5}$/.test(lines[i])) { // Indeks (5 cyfr)
                     indices.push(lines[i]);
-                }
-                if (/^\d{1,4}[.,]\d{2}$/.test(lines[i])) { // Cena (1-4 cyfry + przecinek/kropka + 2 cyfry)
+                } else if (/^\d{1,4}[.,]\d{2}$/.test(lines[i])) { // Cena (1-4 cyfry + przecinek/kropka + 2 cyfry)
                     prices.push(lines[i].replace(',', '.')); // Zamiana przecinka na kropkę
+                } else {
+                    errors.push(lines[i]); // Zapisujemy błędne wartości
                 }
             }
 
             console.log("Indeksy:", indices);
             console.log("Ceny:", prices);
+            console.log("Błędne wartości:", errors);
 
             let tableContainer = document.createElement('div');
             tableContainer.classList.add('table-container');
@@ -91,6 +94,22 @@
             for (let i = 0; i < minLength; i++) {
                 tableHTML += `<tr>
                     <td>${indices[i]}</td>
+                    <td>${prices[i]}</td>
+                </tr>`;
+            }
+
+            // Jeśli zostały indeksy bez cen, dodajemy je z błędnym rabatem
+            for (let i = minLength; i < indices.length; i++) {
+                tableHTML += `<tr>
+                    <td>${indices[i]}</td>
+                    <td style="color: red;">BŁĄD</td>
+                </tr>`;
+            }
+
+            // Jeśli zostały ceny bez indeksów, dodajemy je osobno
+            for (let i = minLength; i < prices.length; i++) {
+                tableHTML += `<tr>
+                    <td style="color: red;">BŁĄD</td>
                     <td>${prices[i]}</td>
                 </tr>`;
             }
