@@ -9,31 +9,20 @@
         table { width: 80%; margin: 20px auto; border-collapse: collapse; }
         th, td { border: 1px solid black; padding: 8px; text-align: left; }
         th { background-color: #f2f2f2; }
-        .table-container { position: relative; width: 80%; margin: 20px auto; }
+        .table-container { position: relative; width: 80%; margin: 20px auto; border: 1px solid black; padding: 10px; }
         .close-btn { position: absolute; top: -10px; right: -10px; background: red; color: white; border: none; padding: 5px; cursor: pointer; }
         #output { margin-top: 20px; }
-        #matchButton { display: block; margin: 20px auto; padding: 10px; font-size: 16px; background-color: #007BFF; color: white; border: none; cursor: pointer; }
-        #matchButton:hover { background-color: #0056b3; }
     </style>
 </head>
 <body>
     <h1>Odczyt danych z obrazu</h1>
     <input type="file" id="imageInput" accept="image/*">
-    <button id="matchButton">MATCH</button> <!-- Przyciski MUSI być tutaj -->
+    <button id="matchButton">MATCH</button>
     <div id="output"></div>
 
     <script>
         const apiKey = "K82711334988957";
         const jsonUrl = "https://marcin870119.github.io/matchowanie/data.json";
-
-        document.addEventListener("DOMContentLoaded", function () {
-            const matchButton = document.getElementById("matchButton");
-            if (!matchButton) {
-                console.error("❌ BŁĄD: Przycisk MATCH nie został załadowany do DOM!");
-            } else {
-                console.log("✅ Przycisk MATCH został załadowany.");
-            }
-        });
 
         document.getElementById('imageInput').addEventListener('change', function(event) {
             const file = event.target.files[0];
@@ -46,7 +35,7 @@
             fetch(jsonUrl)
                 .then(response => response.json())
                 .then(data => {
-                    console.log("📌 Dane z JSON:", data);
+                    console.log("Dane z JSON:", data);
                 })
                 .catch(error => console.error("Błąd pobierania JSON:", error));
         });
@@ -80,7 +69,7 @@
                 .then(response => response.json())
                 .then(database => {
                     const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-                    console.log("📌 Rozpoznany tekst:", lines);
+                    console.log("Rozpoznany tekst:", lines);
 
                     let indices = [];
                     let prices = [];
@@ -140,7 +129,9 @@
                     tableHTML += `</table>`;
 
                     tableContainer.appendChild(closeButton);
-                    tableContainer.innerHTML += tableHTML;
+                    let tableElement = document.createElement('div');
+                    tableElement.innerHTML = tableHTML;
+                    tableContainer.appendChild(tableElement);
                     document.getElementById('output').appendChild(tableContainer);
                 })
                 .catch(error => console.error("Błąd pobierania JSON:", error));
