@@ -46,6 +46,7 @@
             .then(data => {
                 if (data.ParsedResults) {
                     const text = data.ParsedResults[0].ParsedText;
+                    console.log("Rozpoznany tekst z OCR:", text);
                     parseData(text);
                 } else {
                     console.error("Błąd OCR:", data);
@@ -59,7 +60,7 @@
                 .then(response => response.json())
                 .then(database => {
                     const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-                    console.log("Rozpoznany tekst:", lines);
+                    console.log("Rozpoznany tekst z OCR:", lines);
 
                     let matchedData = [];
 
@@ -67,14 +68,14 @@
                         let indexMatch = lines[i].match(/^\d{4,5}$/);
                         let priceMatch = lines[i + 1]?.match(/^\d{1,4}[.,]\d{2}$/);
 
-                        if (indexMatch && priceMatch) {
+                        if (indexMatch) {
                             let index = indexMatch[0];
-                            let price = priceMatch[0].replace(',', '.');
+                            let price = priceMatch ? priceMatch[0].replace(',', '.') : "Brak";
                             let match = database.find(item => item.MM == index);
 
                             if (match) {
                                 let basePrice = match["CENA 100 MM"] ? parseFloat(match["CENA 100 MM"]) : "Brak";
-                                let discount = (basePrice !== "Brak") ? ((1 - parseFloat(price) / basePrice) * 100).toFixed(2) + "%" : "Brak";
+                                let discount = (basePrice !== "Brak" && price !== "Brak") ? ((1 - parseFloat(price) / basePrice) * 100).toFixed(2) + "%" : "Brak";
                                 matchedData.push({
                                     originalIndex: index,
                                     matchedIndex: match.MM,
@@ -96,6 +97,7 @@
                         }
                     }
 
+                    console.log("Dopasowane dane:", matchedData);
                     displayData(matchedData);
                 })
                 .catch(error => console.error("Błąd pobierania JSON:", error));
