@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Odczyt danych z obrazu - OCR.space</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
+        table { width: 80%; margin: 20px auto; border-collapse: collapse; }
+        th, td { border: 1px solid black; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .table-container { position: relative; width: 80%; margin: 20px auto; }
+        .close-btn { position: absolute; top: -10px; right: -10px; background: red; color: white; border: none; padding: 5px; cursor: pointer; }
+        #output { margin-top: 20px; }
+        #matchButton { display: block; margin: 20px auto; padding: 10px; font-size: 16px; background-color: #007BFF; color: white; border: none; cursor: pointer; }
+        #matchButton:hover { background-color: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>Odczyt danych z obrazu</h1>
+    <input type="file" id="imageInput" accept="image/*">
+    <button id="matchButton">MATCH</button> <!-- Przyciski MUSI być tutaj -->
+    <div id="output"></div>
+
+    <script>
+        const apiKey = "TU_WSTAW_SWÓJ_KLUCZ_API";
+        const jsonUrl = "https://marcin870119.github.io/matchowanie/data.json";
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const matchButton = document.getElementById("matchButton");
+            if (!matchButton) {
+                console.error("❌ BŁĄD: Przycisk MATCH nie został załadowany do DOM!");
+            } else {
+                console.log("✅ Przycisk MATCH został załadowany.");
+            }
+        });
+
+        document.getElementById('imageInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                uploadImage(file);
+            }
+        });
+
+        document.getElementById('matchButton').addEventListener('click', function() {
+            fetch(jsonUrl)
+                .then(response => response.json())
+                .then(data => {
+                    console.log("📌 Dane z JSON:", data);
+                })
+                .catch(error => console.error("Błąd pobierania JSON:", error));
+        });
+
+        function uploadImage(file) {
+            let formData = new FormData();
+            formData.append("apikey", apiKey);
+            formData.append("file", file);
+            formData.append("language", "pol");
+            formData.append("isOverlayRequired", false);
+            formData.append("OCREngine", 2);
+
+            fetch("https://api.ocr.space/parse/image", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.ParsedResults) {
+                    const text = data.ParsedResults[0].ParsedText;
+                    parseData(text);
+                } else {
+                    console.error("Błąd OCR:", data);
+                }
+            })
+            .catch(error => console.error("Błąd:", error));
+        }
+
+        function parseData(text) {
+            fetch(jsonUrl)
+                .then(response => response.json())
+                .then(database => {
+                    const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+                    console.log("📌 Rozpoznany tekst:", lines);
+
+                    let indices = [];
+                    let prices = [];
+                    let matchedData = [];
+
+                    for (let i = 0; i < lines.length; i++) {
+                        if (/^\d{4,5}$/.test(lines[i])) {
+                            indices.push(lines[i]);
+                        }
+                        if (/^\d{1,4}[.,]\d{2}$/.test(lines[i])) {
+                            prices.push(lines[i]);
+                        }
+                    }
+
+                    indices.forEach(index => {
+                        let match = database.find(item => item.MM == index);
+                        if (match) {
+                            matchedData.push({
+                                originalIndex: index,
+                                matchedIndex: match.MM,
+                                name: match.NAZWA,
+                                price: match["CENA 100 MM"],
+                                discount: ((1 - parseFloat(prices[indices.indexOf(index)]) / parseFloat(match["CENA 100 MM"])) * 100).toFixed(2) + "%"
+                            });
+                        }
+                    });
+
+                    let tableContainer = document.createElement('div');
+                    tableContainer.classList.add('table-container');
+
+                    let closeButton = document.createElement('button');
+                    closeButton.classList.add('close-btn');
+                    closeButton.textContent = 'X';
+                    closeButton.onclick = function() { tableContainer.remove(); };
+
+                    let tableHTML = `<table>
+                        <tr>
+                            <th>Indeks</th>
+                            <th>Nazwa</th>
+                            <th>Indeks z bazy</th>
+                            <th>Cena netto po rabacie</th>
+                            <th>Cena 100 MM</th>
+                            <th>Rabat</th>
+                        </tr>`;
+
+                    matchedData.forEach(item => {
+                        tableHTML += `<tr>
+                            <td>${item.originalIndex}</td>
+                            <td>${item.name}</td>
+                            <td>${item.matchedIndex}</td>
+                            <td>${prices[indices.indexOf(item.originalIndex)]}</td>
+                            <td>${item.price}</td>
+                            <td>${item.discount}</td>
+                        </tr>`;
+                    });
+
+                    tableHTML += `</table>`;
+
+                    tableContainer.appendChild(closeButton);
+                    tableContainer.innerHTML += tableHTML;
+                    document.getElementById('output').appendChild(tableContainer);
+                })
+                .catch(error => console.error("Błąd pobierania JSON:", error));
+        }
+    </script>
+</body>
+</html>
