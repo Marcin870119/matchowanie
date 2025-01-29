@@ -21,6 +21,8 @@
             color: white; 
             border: none; 
             border-radius: 5px; 
+            display: block;
+            margin: 20px auto;
         }
     </style>
 </head>
@@ -33,6 +35,16 @@
     <script>
         const apiKey = "K82711334988957";
         const jsonUrl = "https://marcin870119.github.io/matchowanie/data.json";
+
+        // Sprawdzenie czy przycisk jest na stronie
+        document.addEventListener("DOMContentLoaded", () => {
+            const matchButton = document.getElementById("matchButton");
+            if (matchButton) {
+                console.log("Przycisk MATCH jest na stronie.");
+            } else {
+                console.error("Przycisk MATCH się nie wyświetla.");
+            }
+        });
 
         document.getElementById('imageInput').addEventListener('change', function(event) {
             const file = event.target.files[0];
