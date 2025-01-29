@@ -6,32 +6,26 @@
     <title>Odczyt danych z obrazu - OCR.space</title>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
-        img { max-width: 100%; height: auto; margin-top: 10px; }
         table { width: 80%; margin: 20px auto; border-collapse: collapse; }
         th, td { border: 1px solid black; padding: 8px; text-align: left; }
         th { background-color: #f2f2f2; }
+        .table-container { position: relative; width: 80%; margin: 20px auto; padding: 10px; border: 1px solid black; }
+        .close-btn { position: absolute; top: -10px; right: -10px; background: red; color: white; border: none; padding: 5px; cursor: pointer; }
         #output { margin-top: 20px; }
     </style>
 </head>
 <body>
     <h1>Odczyt danych z obrazu</h1>
     <input type="file" id="imageInput" accept="image/*">
-    <br>
-    <img id="preview" src="" alt="Podgląd obrazu">
     <div id="output"></div>
 
     <script>
-        const apiKey = "K82711334988957"; // Wstaw tutaj swój klucz API z OCR.space
+        const apiKey = "K82711334988957"; // Tutaj wstaw nowy klucz API z OCR.space
 
         document.getElementById('imageInput').addEventListener('change', function(event) {
             const file = event.target.files[0];
             if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById('preview').src = e.target.result;
-                    uploadImage(file);
-                };
-                reader.readAsDataURL(file);
+                uploadImage(file);
             }
         });
 
@@ -39,9 +33,9 @@
             let formData = new FormData();
             formData.append("apikey", apiKey);
             formData.append("file", file);
-            formData.append("language", "pol"); // Polski język
+            formData.append("language", "pol"); // Ustawienie języka OCR na polski
             formData.append("isOverlayRequired", false);
-            formData.append("OCREngine", 2); // Użycie lepszego silnika OCR
+            formData.append("OCREngine", 2); // Lepszy silnik OCR
 
             fetch("https://api.ocr.space/parse/image", {
                 method: "POST",
@@ -63,41 +57,48 @@
             const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
             console.log("Rozpoznany tekst:", lines);
 
-            let products = [];
-            let currentProduct = {};
+            let indices = [];
+            let prices = [];
 
-            lines.forEach((line, i) => {
-                if (/^\d{5}$/.test(line)) { // Indeks produktu (5 cyfr)
-                    if (Object.keys(currentProduct).length > 0) {
-                        products.push(currentProduct);
-                    }
-                    currentProduct = { indeks: line, cena: "" };
-                } else if (/\b\d{1,4}[.,]\d{2}\b/.test(line) && currentProduct.indeks) { // Cena netto po rabacie
-                    currentProduct.cena = line;
+            for (let i = 0; i < lines.length; i++) {
+                if (/^\d{5}$/.test(lines[i])) {
+                    indices.push(lines[i]);
                 }
-            });
-
-            if (Object.keys(currentProduct).length > 0) {
-                products.push(currentProduct);
+                if (/^\d{1,4}[.,]\d{2}$/.test(lines[i])) {
+                    prices.push(lines[i]);
+                }
             }
 
-            let outputHTML = `<table>
+            let tableContainer = document.createElement('div');
+            tableContainer.classList.add('table-container');
+
+            let closeButton = document.createElement('button');
+            closeButton.classList.add('close-btn');
+            closeButton.textContent = 'X';
+            closeButton.onclick = function() { tableContainer.remove(); };
+            
+            let tableHTML = `<table>
                 <tr>
                     <th>Indeks</th>
                     <th>Cena netto po rabacie</th>
                 </tr>`;
 
-            products.forEach(product => {
-                if (product.indeks && product.cena) {
-                    outputHTML += `<tr>
-                        <td>${product.indeks}</td>
-                        <td>${product.cena}</td>
-                    </tr>`;
-                }
-            });
+            for (let i = 0; i < Math.min(indices.length, prices.length); i++) {
+                tableHTML += `<tr>
+                    <td>${indices[i]}</td>
+                    <td>${prices[i]}</td>
+                </tr>`;
+            }
 
-            outputHTML += `</table>`;
-            document.getElementById('output').innerHTML = outputHTML;
+            tableHTML += `</table>`;
+
+            // Poprawne dodanie elementów do kontenera, zamiast nadpisywania go
+            tableContainer.appendChild(closeButton);
+            let tableElement = document.createElement('div');
+            tableElement.innerHTML = tableHTML;
+            tableContainer.appendChild(tableElement);
+
+            document.getElementById('output').appendChild(tableContainer);
         }
     </script>
 </body>
