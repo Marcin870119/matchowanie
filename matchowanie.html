@@ -9,11 +9,21 @@
         table { width: 80%; margin: 20px auto; border-collapse: collapse; }
         th, td { border: 1px solid black; padding: 8px; text-align: left; }
         th { background-color: #f2f2f2; }
-        .table-container { position: relative; width: 80%; margin: 20px auto; }
+        .table-container { position: relative; width: 80%; margin: 20px auto; border: 1px solid black; padding: 10px; }
         .close-btn { position: absolute; top: -10px; right: -10px; background: red; color: white; border: none; padding: 5px; cursor: pointer; }
         #output { margin-top: 20px; }
-        #matchButton { display: block; margin: 20px auto; padding: 10px; font-size: 16px; background-color: #007BFF; color: white; border: none; cursor: pointer; }
-        #matchButton:hover { background-color: #0056b3; }
+        #matchButton { 
+            margin-top: 10px; 
+            padding: 10px 20px; 
+            font-size: 16px; 
+            cursor: pointer; 
+            background-color: blue; 
+            color: white; 
+            border: none; 
+            border-radius: 5px; 
+            display: block;
+            margin: 20px auto;
+        }
     </style>
 </head>
 <body>
@@ -24,14 +34,15 @@
 
     <script>
         const apiKey = "K82711334988957";
-        const jsonUrl = "https://marcin870119.github.io/matchowanie/data.json?nocache=" + new Date().getTime();
+        const jsonUrl = "https://marcin870119.github.io/matchowanie/data.json";
 
-        document.addEventListener("DOMContentLoaded", function () {
+        // Sprawdzenie czy przycisk jest na stronie
+        document.addEventListener("DOMContentLoaded", () => {
             const matchButton = document.getElementById("matchButton");
-            if (!matchButton) {
-                console.error("❌ BŁĄD: Przycisk MATCH nie został załadowany do DOM!");
+            if (matchButton) {
+                console.log("Przycisk MATCH jest na stronie.");
             } else {
-                console.log("✅ Przycisk MATCH został załadowany.");
+                console.error("Przycisk MATCH się nie wyświetla.");
             }
         });
 
@@ -43,12 +54,13 @@
         });
 
         document.getElementById('matchButton').addEventListener('click', function() {
+            console.log("Przycisk MATCH kliknięty");
             fetch(jsonUrl)
                 .then(response => response.json())
                 .then(data => {
-                    console.log("📌 Dane z JSON:", data);
+                    console.log("Dane z JSON:", data);
                 })
-                .catch(error => console.error("❌ Błąd pobierania JSON:", error));
+                .catch(error => console.error("Błąd pobierania JSON:", error));
         });
 
         function uploadImage(file) {
@@ -69,10 +81,10 @@
                     const text = data.ParsedResults[0].ParsedText;
                     parseData(text);
                 } else {
-                    console.error("❌ Błąd OCR:", data);
+                    console.error("Błąd OCR:", data);
                 }
             })
-            .catch(error => console.error("❌ Błąd:", error));
+            .catch(error => console.error("Błąd:", error));
         }
 
         function parseData(text) {
@@ -80,7 +92,7 @@
                 .then(response => response.json())
                 .then(database => {
                     const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-                    console.log("📌 Rozpoznany tekst:", lines);
+                    console.log("Rozpoznany tekst:", lines);
 
                     let indices = [];
                     let prices = [];
@@ -95,27 +107,18 @@
                         }
                     }
 
-                    console.log("📌 Odczytane indeksy:", indices);
-                    console.log("📌 Odczytane ceny:", prices);
-
                     indices.forEach(index => {
-                        let match = database.find(item => String(item.MM) === String(index));
+                        let match = database.find(item => item.MM == index);
                         if (match) {
                             matchedData.push({
                                 originalIndex: index,
                                 matchedIndex: match.MM,
                                 name: match.NAZWA,
                                 price: match["CENA 100 MM"],
-                                discount: ((1 - parseFloat(prices[indices.indexOf(index)].replace(",", ".")) / parseFloat(match["CENA 100 MM"])) * 100).toFixed(2) + "%"
+                                discount: ((1 - parseFloat(prices[indices.indexOf(index)]) / parseFloat(match["CENA 100 MM"])) * 100).toFixed(2) + "%"
                             });
                         }
                     });
-
-                    if (matchedData.length === 0) {
-                        console.warn("⚠️ Brak dopasowanych danych!");
-                    } else {
-                        console.log("✅ Dopasowane dane:", matchedData);
-                    }
 
                     let tableContainer = document.createElement('div');
                     tableContainer.classList.add('table-container');
@@ -149,10 +152,12 @@
                     tableHTML += `</table>`;
 
                     tableContainer.appendChild(closeButton);
-                    tableContainer.innerHTML += tableHTML;
+                    let tableElement = document.createElement('div');
+                    tableElement.innerHTML = tableHTML;
+                    tableContainer.appendChild(tableElement);
                     document.getElementById('output').appendChild(tableContainer);
                 })
-                .catch(error => console.error("❌ Błąd pobierania JSON:", error));
+                .catch(error => console.error("Błąd pobierania JSON:", error));
         }
     </script>
 </body>
